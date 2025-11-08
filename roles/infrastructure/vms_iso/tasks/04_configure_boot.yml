@@ -1,0 +1,30 @@
+---
+- name: cambiando los archivos de BIOS isolinux.cfg
+  template: 
+    src: isolinux.cfg.j2
+    dest: "{{WRK_DIR}}/isolinux/isolinux.cfg"
+  become: yes
+
+- name: txt.cfg
+  template: 
+    src: txt.cfg.j2
+    dest: "{{WRK_DIR}}/isolinux/txt.cfg"
+  become: yes
+
+- name: grub.cfg
+  template:
+    src: grub.cfg.j2
+    dest: "{{WRK_DIR}}/boot/grub/grub.cfg"
+  
+
+- name: Modificar initrd con preseed.cfg
+  shell: |
+    cd {{ WRK_DIR }}/install.amd 
+    mkdir -p initrd-edit && cd initrd-edit
+    gunzip -c ../initrd.gz | cpio -id
+    cp {{ WRK_DIR }}/preseed.cfg ./preseed.cfg
+    find . | cpio -o -H newc | gzip -9 > ../initrd.gz
+    cd .. && rm -rf initrd-edit
+  args:
+    chdir: "{{ WRK_DIR }}/install.amd"  # ¡Este es un bonus! Te evita el primer 'cd'
+  become: yes

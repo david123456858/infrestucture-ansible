@@ -1,0 +1,6 @@
+---
+- import_tasks: 01_prepare.yml
+- import_tasks: 02_mount_iso.yml
+- import_tasks: 03_create_proseed.yml
+- import_tasks: 04_configure_boot.yml
+- import_tasks: 05_build_iso.yml

@@ -1,0 +1,38 @@
+---
+- name: Verificar si /vm/iso existe
+  stat:
+    path: "/vm/iso"
+  register: vm_dir_stat
+
+- name: Crear los directorios 
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ MNT_DIR }}"
+    - "{{ WRK_DIR }}"
+  when: not vm_dir_stat.stat.exists
+
+- name: Copiar la iso en la ruta iso
+  copy:
+    src: "{{ path_iso_download }}"
+    dest: "{{ SRC_ISO }}"
+    mode: '0644'
+    remote_src: yes
+
+- name: Montar la iso
+  mount:
+    path: "{{ MNT_DIR }}"
+    src: "{{ SRC_ISO }}"
+    fstype: iso9660
+    opts: loop
+    state: mounted
+
+- name: "[OPTIMIZADO] Sincronizar contenido del ISO (rsync en modo espejo)"
+  command:
+    cmd: "rsync -a --delete {{ MNT_DIR }}/ {{ WRK_DIR }}/"
+  args:
+    creates: "{{ WRK_DIR }}/dists"  # ¡Condición de idempotencia!
+  become: yes
+  changed_when: false

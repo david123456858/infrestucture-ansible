@@ -1,0 +1,13 @@
+default install
+
+label install
+    menu label ^Install
+    menu default
+    kernel /install.amd/vmlinuz
+    append auto=true priority=critical file=/cdrom/preseed.cfg preseed/file=/cdrom/preseed.cfg preseed/locale=en_US.UTF-8 locale=en_US.UTF-8 language=en country=CO console-setup/ask_detect=false keyboard-configuration/ask_detect=false keyboard-configuration/xkb-keymap=us keyboard-configuration/layoutcode=us initrd=/install.amd/initrd.gz --- quiet
+
+label installgui
+    menu label ^Graphical install
+    kernel /install.amd/vmlinuz
+    append auto=true priority=critical file=/cdrom/preseed.cfg preseed/file=/cdrom/preseed.cfg preseed/locale=en_US.UTF-8 locale=en_US.UTF-8 language=en country=CO console-setup/ask_detect=false keyboard-configuration/ask_detect=false keyboard-configuration/xkb-keymap=us keyboard-configuration/layoutcode=us initrd=/install.amd/gtk/initrd.gz --- quiet
+

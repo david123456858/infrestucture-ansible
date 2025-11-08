@@ -1,0 +1,32 @@
+---
+- name: Actualizar paquetes
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Instalar paquetes requeridos
+  apt:
+    state: latest
+    name:
+      - xorriso
+      - isolinux
+      - syslinux
+      - rsync
+      - whois
+  become: yes
+
+- name: verificar si VirtualBox esta instalado
+  shell: which VBoxManage
+  register: vbox_check
+  ignore_errors: yes
+  changed_when: false
+
+- name: Instalar Virutal si no esta
+  apt:
+    name: virtualbox
+    state: present
+    update_cache: yes
+  when:
+    - vbox_check.rc != 0
+  become: yes

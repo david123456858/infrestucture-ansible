@@ -1,0 +1,177 @@
+---
+# PASO 0: Definir el directorio SSH del usuario real (no root)
+- name: Obtener directorio home del usuario que ejecuta
+  set_fact:
+    real_user_home: "{{ lookup('env', 'HOME') }}"
+    real_user: "{{ lookup('env', 'USER') }}"
+
+- name: Debug - información del usuario
+  debug:
+    msg: |
+      Usuario real: {{ real_user }}
+      HOME real: {{ real_user_home }}
+      Buscando claves en: {{ real_user_home }}/.ssh/
+
+# PASO 1: Listar qué hay en .ssh del usuario real
+- name: Listar contenido de .ssh
+  command: ls -la {{ real_user_home }}/.ssh/
+  register: ssh_dir_content
+  ignore_errors: yes
+  changed_when: false
+  become: no
+
+- name: Mostrar contenido de .ssh
+  debug:
+    msg: "{{ ssh_dir_content.stdout_lines }}"
+  when: ssh_dir_content.rc == 0
+
+# PASO 2: Buscar CUALQUIER clave pública que exista
+- name: Buscar claves públicas disponibles
+  shell: |
+    ls {{ real_user_home }}/.ssh/*.pub 2>/dev/null || echo ""
+  register: available_keys
+  changed_when: false
+  become: no
+
+- name: Mostrar claves encontradas
+  debug:
+    msg: |
+      Claves públicas encontradas:
+      {{ available_keys.stdout_lines if available_keys.stdout != '' else 'NINGUNA' }}
+
+- name: DETENER si no hay NINGUNA clave pública
+  fail:
+    msg: |
+      ❌ ERROR: No se encontró NINGUNA clave SSH pública
+      
+      Usuario: {{ real_user }}
+      Directorio: {{ real_user_home }}/.ssh/
+      
+      Genera al menos UNA clave con:
+        ssh-keygen -t ed25519 -f {{ real_user_home }}/.ssh/id_ed25519 -N ''
+      O:
+        ssh-keygen -t rsa -b 4096 -f {{ real_user_home }}/.ssh/id_rsa -N ''
+  when: available_keys.stdout == ''
+
+# PASO 3: Regenerar authorized_keys con TODAS las claves encontradas
+- name: Regenerar authorized_keys con todas las claves públicas disponibles
+  shell: |
+    # Limpiar authorized_keys
+    > {{ real_user_home }}/.ssh/authorized_keys
+    
+    # Agregar TODAS las claves públicas que existan
+    for key in {{ real_user_home }}/.ssh/*.pub; do
+      if [ -f "$key" ]; then
+        cat "$key" >> {{ real_user_home }}/.ssh/authorized_keys
+      fi
+    done
+    
+    # Verificar que NO esté vacío
+    if [ ! -s {{ real_user_home }}/.ssh/authorized_keys ]; then
+      echo "ERROR: No se pudo crear authorized_keys" >&2
+      exit 1
+    fi
+    
+    # Ajustar permisos
+    chmod 600 {{ real_user_home }}/.ssh/authorized_keys
+    
+    # Mostrar contenido
+    echo "=== AUTHORIZED_KEYS CREADO ==="
+    cat {{ real_user_home }}/.ssh/authorized_keys
+  register: auth_keys_creation
+  changed_when: true
+  become: no
+
+- name: Mostrar claves que se incluirán en el ISO
+  debug:
+    msg: "{{ auth_keys_creation.stdout_lines }}"
+
+# PASO 4: Verificar que authorized_keys NO está vacío
+- name: Verificar tamaño de authorized_keys
+  stat:
+    path: "{{ real_user_home }}/.ssh/authorized_keys"
+  register: auth_keys_stat
+  become: no
+
+- name: DETENER si authorized_keys está vacío
+  fail:
+    msg: |
+      ❌ ERROR CRÍTICO: authorized_keys está VACÍO
+      Tamaño: {{ auth_keys_stat.stat.size }} bytes
+      
+      Esto significa que no tienes claves SSH válidas.
+  when: auth_keys_stat.stat.size == 0
+
+- name: ✅ Confirmación - authorized_keys tiene contenido
+  debug:
+    msg: |
+      ✅ authorized_keys verificado
+      Tamaño: {{ auth_keys_stat.stat.size }} bytes
+      Ubicación: {{ real_user_home }}/.ssh/authorized_keys
+
+# PASO 5: Crear directorio de trabajo del ISO
+- name: Crear directorio de trabajo si no existe
+  file:
+    path: "{{ WRK_DIR }}"
+    state: directory
+    mode: '0755'
+  become: yes
+
+# PASO 6: Copiar authorized_keys al ISO con verificación
+- name: Copiar authorized_keys al directorio del ISO
+  copy:
+    src: "{{ real_user_home }}/.ssh/authorized_keys"
+    dest: "{{ WRK_DIR }}/authorized_keys"
+    mode: '0644'
+    remote_src: yes
+  become: yes
+
+# PASO 7: Verificar que se copió correctamente
+- name: Leer contenido copiado al ISO
+  command: cat "{{ WRK_DIR }}/authorized_keys"
+  register: iso_auth_keys
+  become: yes
+  changed_when: false
+
+- name: Verificar tamaño del archivo en el ISO
+  stat:
+    path: "{{ WRK_DIR }}/authorized_keys"
+  register: iso_auth_stat
+  become: yes
+
+- name: DETENER si el archivo en el ISO está vacío
+  fail:
+    msg: |
+      ❌ ERROR: authorized_keys se copió VACÍO al ISO
+      Tamaño: {{ iso_auth_stat.stat.size }} bytes
+  when: iso_auth_stat.stat.size == 0
+
+- name: ✅ Confirmación final - Archivo en el ISO
+  debug:
+    msg: |
+      ✅ ÉXITO: authorized_keys copiado al ISO
+      Ubicación: {{ WRK_DIR }}/authorized_keys
+      Tamaño: {{ iso_auth_stat.stat.size }} bytes
+      Contenido:
+      {{ iso_auth_keys.stdout }}
+
+# PASO 8: Crear preseed.cfg
+- name: Crear preseed para la instalación
+  template:
+    src: preseed.cfg.j2
+    dest: "{{ WRK_DIR }}/preseed.cfg"
+  become: yes
+
+- name: 📋 RESUMEN FINAL
+  debug:
+    msg: |
+      ========================================
+      🔑 CLAVES SSH CONFIGURADAS
+      ========================================
+      Usuario: {{ real_user }}
+      ✅ authorized_keys verificado en {{ real_user_home }}/.ssh/
+      ✅ authorized_keys verificado en {{ WRK_DIR }}/
+      ✅ preseed.cfg creado
+      
+      Las VMs tendrán acceso SSH sin password
+      ========================================
