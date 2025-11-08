@@ -1,7 +1,7 @@
 ---
 - name: Verificar si /vm/iso existe
   stat:
-    path: "/vm/iso"
+    path: "{{ project_paths.iso }}"
   register: vm_dir_stat
 
 - name: Crear los directorios 

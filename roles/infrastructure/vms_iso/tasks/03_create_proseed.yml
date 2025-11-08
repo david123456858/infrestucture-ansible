@@ -42,7 +42,7 @@
 - name: DETENER si no hay NINGUNA clave pública
   fail:
     msg: |
-      ❌ ERROR: No se encontró NINGUNA clave SSH pública
+      ERROR: No se encontró NINGUNA clave SSH pública
       
       Usuario: {{ real_user }}
       Directorio: {{ real_user_home }}/.ssh/
@@ -96,16 +96,16 @@
 - name: DETENER si authorized_keys está vacío
   fail:
     msg: |
-      ❌ ERROR CRÍTICO: authorized_keys está VACÍO
+      ERROR CRÍTICO: authorized_keys está VACÍO
       Tamaño: {{ auth_keys_stat.stat.size }} bytes
       
       Esto significa que no tienes claves SSH válidas.
   when: auth_keys_stat.stat.size == 0
 
-- name: ✅ Confirmación - authorized_keys tiene contenido
+- name: Confirmación - authorized_keys tiene contenido
   debug:
     msg: |
-      ✅ authorized_keys verificado
+      authorized_keys verificado
       Tamaño: {{ auth_keys_stat.stat.size }} bytes
       Ubicación: {{ real_user_home }}/.ssh/authorized_keys
 
@@ -142,14 +142,14 @@
 - name: DETENER si el archivo en el ISO está vacío
   fail:
     msg: |
-      ❌ ERROR: authorized_keys se copió VACÍO al ISO
+      ERROR: authorized_keys se copió VACÍO al ISO
       Tamaño: {{ iso_auth_stat.stat.size }} bytes
   when: iso_auth_stat.stat.size == 0
 
-- name: ✅ Confirmación final - Archivo en el ISO
+- name: Confirmación final - Archivo en el ISO
   debug:
     msg: |
-      ✅ ÉXITO: authorized_keys copiado al ISO
+      EXITO: authorized_keys copiado al ISO
       Ubicación: {{ WRK_DIR }}/authorized_keys
       Tamaño: {{ iso_auth_stat.stat.size }} bytes
       Contenido:
@@ -161,17 +161,3 @@
     src: preseed.cfg.j2
     dest: "{{ WRK_DIR }}/preseed.cfg"
   become: yes
-
-- name: 📋 RESUMEN FINAL
-  debug:
-    msg: |
-      ========================================
-      🔑 CLAVES SSH CONFIGURADAS
-      ========================================
-      Usuario: {{ real_user }}
-      ✅ authorized_keys verificado en {{ real_user_home }}/.ssh/
-      ✅ authorized_keys verificado en {{ WRK_DIR }}/
-      ✅ preseed.cfg creado
-      
-      Las VMs tendrán acceso SSH sin password
-      ========================================
