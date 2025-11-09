@@ -1,0 +1,14 @@
+- name: Mostrar resultado de la creación de VMs
+  debug:
+    msg: "{{ item.stdout_lines }}"
+  loop: "{{ vm_creation_result.results }}"
+  when: item.stdout_lines is defined and item.stdout_lines | length > 0
+
+- name: Verificar VMs creadas
+  shell: VBoxManage list vms
+  register: final_vm_list
+  changed_when: false
+
+- name: Mostrar lista final de VMs
+  debug:
+    msg: "VMs disponibles: {{ final_vm_list.stdout_lines }}"

@@ -1,0 +1,4 @@
+---
+- import_tasks: prepare_vm.yml
+- import_tasks: run_vms.yml
+- import_tasks: log_vms.yml

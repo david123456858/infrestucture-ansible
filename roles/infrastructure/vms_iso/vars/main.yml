@@ -6,8 +6,8 @@ path_iso: /home/sysadmin/Documentos
 
 SRC_ISO: "{{ project_paths.iso }}/{{ debian_iso.name}}"
 OUT_ISO: "{{ project_paths.iso }}/{{ ISO_NAME }}"
-MNT_DIR: {{ project_paths.iso }}/debian-iso
-WRK_DIR: {{ project_paths.iso }}/debian-iso-work
+MNT_DIR: "{{ project_paths.iso }}/debian-iso"
+WRK_DIR: "{{ project_paths.iso }}/debian-iso-work"
 
 # Detectar usuario actual automáticamente
 user: "{{ lookup('env', 'USER') }}"

@@ -1,0 +1,94 @@
+- name: Mostrar la lista de mv para activar
+  debug:
+    msg: "Se creara {{ item.name }} "
+  loop: "{{ vms_list }}"
+
+- name: Fabricante del procesador
+  debug:
+    msg: "Este es el procesador {{ansible_processor[1]}} y este {{ansible_processor[2]}}" 
+
+- name: Detectar el fabriante
+  set_fact:
+    processor: >
+      {% set processor_name = (ansible_processor[1] ~ ansible_processor[2]) | lower | default('') %}
+          {% if 'intel' in processor_name %}
+            intel
+          {% elif 'amd' in processor_name or 'ryzen' in processor_name %}
+            amd
+          {% else %}
+            unknown
+          {% endif %}
+
+- name: Verificar si KVM está cargado
+  shell: lsmod | grep -E "(kvm_intel|kvm_amd|kvm)" || echo "KVM_NOT_LOADED"
+  register: kvm_status
+  changed_when: false
+  failed_when: false
+
+- name: Mostrar estado actual de KVM
+  debug:
+    msg: "Estado de KVM: {{ kvm_status.stdout_lines }}"
+
+- name: Descargar módulos KVM para evitar conflicto con VirtualBox
+  shell: |
+    set -e
+    echo "Descargando módulos KVM para usar VirtualBox..."
+    
+    # Primero intentar descargar módulos específicos del procesador
+    {% if processor == 'intel' %}
+    if lsmod | grep -q kvm_intel; then
+      modprobe -r kvm_intel || echo "No se pudo descargar kvm_intel"
+    fi
+    {% elif processor == 'amd' %}
+    if lsmod | grep -q kvm_amd; then
+      modprobe -r kvm_amd || echo "No se pudo descargar kvm_amd"
+    fi
+    {% endif %}
+    
+    # Luego descargar el módulo kvm general si es posible
+    if lsmod | grep -q "^kvm "; then
+      modprobe -r kvm || echo "No se pudo descargar kvm (puede estar en uso)"
+    fi
+    
+    echo "Módulos KVM procesados exitosamente"
+  become: yes
+  register: kvm_unload_result
+  failed_when: false
+  when: kvm_status.stdout != "KVM_NOT_LOADED"
+
+- name: Verificar estado final de módulos
+  shell: lsmod | grep -E "(kvm_intel|kvm_amd|kvm|vbox)" || echo "NO_HYPERVISOR_MODULES"
+  register: final_module_status
+  changed_when: false
+  failed_when: false
+
+- name: Mostrar estado final de módulos de virtualización
+  debug:
+    msg: 
+      - "Estado final de módulos:"
+      - "{{ final_module_status.stdout_lines }}"
+      - "VirtualBox ahora puede usar {{ processor | upper }}-V sin conflictos"
+
+
+- name: Verificar si la VM ya existe
+  shell: VBoxManage list vms | grep -q "^\"{{ item.name }}\"" || echo "VM_NOT_EXISTS"
+  register: vm_exists_check
+  loop: "{{ vms_list }}"
+  failed_when: false
+  changed_when: false
+
+- name: Verificar si el directorio de la VM ya existe
+  stat:
+    path: "/vm/{{ item.name_total }}"
+  register: vm_dir_exists
+  loop: "{{ vms_list }}"
+
+- name: Limpiar directorio de VM existente si la VM no está registrada
+  file:
+    path: "/vm/{{ item.item.name_total }}"
+    state: absent
+  loop: "{{ vm_dir_exists.results }}"
+  when: 
+    - item.stat.exists
+    - vm_exists_check.results[ansible_loop.index0].stdout == "VM_NOT_EXISTS"
+  become: yes

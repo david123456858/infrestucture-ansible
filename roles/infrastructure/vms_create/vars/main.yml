@@ -1,0 +1,25 @@
+OUT_ISO: "/vm/iso/debian-13.1.0-amd64-netinst-custom.iso"
+vms_list:
+  - name: "k8s-master"
+    name_total: k8s-master
+    memory: 4096
+    cpus: 2
+    mac_address: 0800279E473A
+    interface: enp3s0
+    disk_size: 20000
+  
+  - name: "k8s-worker"
+    name_total: k8s-worker
+    memory: 4096
+    cpus: 2
+    mac_address: 0800279E473B
+    interface: enp3s0
+    disk_size: 20000
+
+  # - name: "tools"
+  #   name_total: tools
+  #   memory: 4096
+  #   cpus: 2
+  #   mac_address: 0800279E473C
+  #   interface: enp3s0
+  #   disk_size: 20000

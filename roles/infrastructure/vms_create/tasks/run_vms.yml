@@ -1,0 +1,46 @@
+- name: Crear y configurar maquinas virtuales
+  shell: |
+    set -e
+    OUT_ISO="{{ OUT_ISO }}"
+    
+    # Verificar si la VM ya existe
+    if VBoxManage list vms | grep -q "^\"{{ item.name }}\""; then
+      echo "VM {{ item.name }} ya existe, omitiendo creación"
+      exit 0
+    fi
+    
+    # Crear directorio base si no existe
+    mkdir -p "/vm/{{ item.name_total }}"
+    
+    # Crear VM
+    VBoxManage createvm --name "{{ item.name }}" --ostype Debian_64 --basefolder /vm --register
+        
+    # Configurar hardware
+    VBoxManage modifyvm "{{ item.name }}" --firmware bios --boot1 dvd --boot2 disk --boot3 none --boot4 none
+    VBoxManage modifyvm "{{ item.name }}" --memory {{ item.memory }} --cpus {{ item.cpus }} --audio-driver none --graphicscontroller vmsvga --vram 16
+        
+    # Crear disco duro - CORREGIDO: rutas consistentes
+    VBoxManage createhd --filename "/vm/{{ item.name_total }}/{{ item.name_total }}.vdi" --size {{ item.disk_size }} --variant Standard
+        
+    # Configurar almacenamiento - CORREGIDO: rutas consistentes
+    VBoxManage storagectl "{{ item.name }}" --name "SATA Controller" --add sata --controller IntelAhci
+    VBoxManage storageattach "{{ item.name }}" --storagectl "SATA Controller" --port 0 --device 0 --type hdd --medium "/vm/{{ item.name_total }}/{{ item.name_total }}.vdi" --nonrotational on --hotpluggable on
+        
+    # Configurar red - CORREGIDO: sin comillas en MAC
+    VBoxManage modifyvm "{{ item.name }}" --macaddress1 {{ item.mac_address }}
+    VBoxManage modifyvm "{{ item.name }}" --nic1 bridged --bridgeadapter1 {{ item.interface }}
+        
+    # Configurar DVD
+    VBoxManage storagectl "{{ item.name }}" --name "IDE Controller" --add ide
+    VBoxManage storageattach "{{ item.name }}" --storagectl "IDE Controller" --port 0 --device 0 --type dvddrive --medium "{{ OUT_ISO }}"
+        
+    # Iniciar VM
+    VBoxManage startvm "{{ item.name }}"
+    
+    echo "VM {{ item.name }} creada e iniciada exitosamente"
+  loop: "{{ vms_list }}"
+  environment:
+    OUT_ISO: "{{ OUT_ISO }}"
+  args:
+    executable: /bin/bash
+  register: vm_creation_result
