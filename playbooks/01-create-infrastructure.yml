@@ -1,8 +1,24 @@
 ---
 - name: Create infractrucura 
   hosts: localhost
-  gather_facts: false
-  vars_files:
-    - ../group_vars/all.yml
+  gather_facts: yes
+  become: yes
+
   roles:
-    - 
+    - infrastructure/vms_iso
+  
+  tags:
+    - infrastructure
+    - iso
+
+- name: crear maquinas virtuales
+  hosts: localhost
+  gather_facts: yes
+  become: yes
+
+  roles:
+    - infrastructure/vms_create
+
+  tags:
+    - infrastructure
+    - vms

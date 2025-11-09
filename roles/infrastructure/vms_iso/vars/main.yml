@@ -1,11 +1,9 @@
 ---
-ISO_NAME: debian-13.1.0-amd64-netinst.iso
-
-path_iso_download: "/home/sysadmin/Descargas/{{ ISO_NAME }}"
-path_iso: /home/sysadmin/Documentos
+path_iso_download: "/home/sysadmin/Downloads/{{ debian_iso.name }}"
+path_iso: /home/sysadmin/Documents
 
 SRC_ISO: "{{ project_paths.iso }}/{{ debian_iso.name}}"
-OUT_ISO: "{{ project_paths.iso }}/{{ ISO_NAME }}"
+OUT_ISO: "{{ project_paths.iso }}/{{ debian_iso.name }}"
 MNT_DIR: "{{ project_paths.iso }}/debian-iso"
 WRK_DIR: "{{ project_paths.iso }}/debian-iso-work"
 

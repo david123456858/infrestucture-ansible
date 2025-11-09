@@ -28,7 +28,7 @@
         
     # Configurar red - CORREGIDO: sin comillas en MAC
     VBoxManage modifyvm "{{ item.name }}" --macaddress1 {{ item.mac_address }}
-    VBoxManage modifyvm "{{ item.name }}" --nic1 bridged --bridgeadapter1 {{ item.interface }}
+    VBoxManage modifyvm "{{ item.name }}" --nic1 bridged --bridgeadapter1 {{ network.interface }}
         
     # Configurar DVD
     VBoxManage storagectl "{{ item.name }}" --name "IDE Controller" --add ide
